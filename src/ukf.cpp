@@ -95,24 +95,26 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
 			previous_timestamp_= meas_package.timestamp_;
 		}
 		is_initialized_=true;
-		std::cout << "Updated state x: " << std::endl << x_ << std::endl;
+
 		return;
 	}
 	std::cout << "start prediction" << std::endl;
 
-	std::cout << "end prediction" << std::endl;
 
-	use_laser_=false;
+
+	use_radar_=false;
 	if (meas_package.sensor_type_==MeasurementPackage::LASER && use_laser_){
-		long dt = (meas_package.timestamp_-previous_timestamp_)/1000000.0;
+		double dt = (meas_package.timestamp_-previous_timestamp_)/1000000.0;
 		previous_timestamp_= meas_package.timestamp_;
 		Prediction(dt);
+		std::cout << "end prediction" << std::endl;
 		UpdateLidar(meas_package);
 	}
 	else if(meas_package.sensor_type_==MeasurementPackage::RADAR && use_radar_) {
-		long dt = (meas_package.timestamp_-previous_timestamp_)/1000000.0;
+		double dt = (meas_package.timestamp_-previous_timestamp_)/1000000.0;
 		previous_timestamp_= meas_package.timestamp_;
 		Prediction(dt);
+		std::cout << "end prediction" << std::endl;
 		UpdateRadar(meas_package);
 	}
 }
@@ -206,7 +208,7 @@ void UKF::Prediction(double delta_t) {
 	for (int i=0; i<2*n_aug_+1; i++){
 
 		x_ += weights_(i)*Xsig_pred_.col(i);
-		cout<< " x=  \n"<<x_<<endl;
+//		cout<< " x=  \n"<<x_<<endl;
 	}
 
 	cout<< "final predicted x=  \n"<<x_<<endl;
@@ -220,8 +222,8 @@ void UKF::Prediction(double delta_t) {
 
 		  VectorXd x_diff= Xsig_pred_.col(i)-x_;
 //		  cout<< "diff x  "<<x_<<endl;
-		  while (x_diff(3)> M_PI) x_diff(3)-=2.*M_PI;
-		  while (x_diff(3)<-M_PI) x_diff(3)+=2.*M_PI;
+//		  while (x_diff(3)> M_PI) x_diff(3)-=2.*M_PI;
+//		  while (x_diff(3)<-M_PI) x_diff(3)+=2.*M_PI;
 //		  cout<< "diff x2  "<<x_<<endl;
 		  P_+=  weights_(i)* x_diff*x_diff.transpose();
 //		  cout<< "P  "<<P_<<endl;
@@ -245,7 +247,7 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
 
   You'll also need to calculate the lidar NIS.
   */
-	cout<<"start update ledar"<<endl;
+	cout<<"start update lidar"<<endl;
 	int n_z=2;
 	VectorXd z_pred= VectorXd(n_z);
 	VectorXd z= VectorXd(2);
@@ -292,8 +294,8 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
 
 		VectorXd z_diff= Zsig.col(i)-z_pred;
 		VectorXd x_diff= Xsig_pred_.col(i)-x_;
-		while (x_diff(3)> M_PI) x_diff(3)-=2.*M_PI;
-		while (x_diff(3)<-M_PI) x_diff(3)+=2.*M_PI;
+//		while (x_diff(3)> M_PI) x_diff(3)-=2.*M_PI;
+//		while (x_diff(3)<-M_PI) x_diff(3)+=2.*M_PI;
 		Tc+= weights_(i)*x_diff*z_diff.transpose();
 	}
 
@@ -334,7 +336,7 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
 		double yaw=Xsig_pred_(3,i);
 
 		Zsig(0,i)= sqrt(pow(p_x,2)+pow(p_y,2));
-		Zsig(1,i)= atan2(p_y,p_x);
+//		Zsig(1,i)= atan2(p_y,p_x);
 		Zsig(2,i)= (p_x*cos(yaw)*v+p_y*sin(yaw)*v)/sqrt(pow(p_x,2)+pow(p_y,2));
 
 
@@ -354,8 +356,8 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
 	S= R;
 	for (int i=0; i<2*n_aug_+1;i++){
 		VectorXd diff_z= Zsig.col(i)- z_pred;
-		while (diff_z(1)> M_PI) diff_z(1)-=2.*M_PI;
-		while (diff_z(1)<-M_PI) diff_z(1)+=2.*M_PI;
+//		while (diff_z(1)> M_PI) diff_z(1)-=2.*M_PI;
+//		while (diff_z(1)<-M_PI) diff_z(1)+=2.*M_PI;
 		S+=weights_(i)* diff_z*diff_z.transpose();
 	}
 
@@ -375,7 +377,10 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
 	}
 
 	MatrixXd K= Tc*S.inverse();
-	x_= x_+ K*(z-z_pred);
+	VectorXd z_diff = z - z_pred;
+//	 while (z_diff(1)> M_PI) z_diff(1)-=2.*M_PI;
+//	 while (z_diff(1)<-M_PI) z_diff(1)+=2.*M_PI;
+	x_= x_+ K*z_diff;
 	P_= P_- K*S*K.transpose();
 
 	std::cout << "Updated state x: " << std::endl << x_ << std::endl;
