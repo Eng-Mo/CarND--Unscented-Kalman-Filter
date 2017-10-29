@@ -58,12 +58,11 @@ UKF::UKF() {
   is_initialized_= false;
   x_=VectorXd(n_x_);
   x_<< 1,1,0,0,0;
-  P_= MatrixXd(n_x_,n_x_);
   P_ << 1,0,0,0,0,
 		  0,1,0,0,0,
-		  0,0,1000,0,0,
-		  0,0,0,1000,0,
-		  0,0,0,0,1000;
+		  0,0,1,0,0,
+		  0,0,0,1,0,
+		  0,0,0,0,1;
 
   lambda_= 3-n_aug_;
   Xsig_pred_=MatrixXd(n_x_,2*n_aug_+1);
@@ -222,8 +221,8 @@ void UKF::Prediction(double delta_t) {
 
 		  VectorXd x_diff= Xsig_pred_.col(i)-x_;
 //		  cout<< "diff x  "<<x_<<endl;
-//		  while (x_diff(3)> M_PI) x_diff(3)-=2.*M_PI;
-//		  while (x_diff(3)<-M_PI) x_diff(3)+=2.*M_PI;
+		  while (x_diff(3)> M_PI) x_diff(3)-=2.*M_PI;
+		  while (x_diff(3)<-M_PI) x_diff(3)+=2.*M_PI;
 //		  cout<< "diff x2  "<<x_<<endl;
 		  P_+=  weights_(i)* x_diff*x_diff.transpose();
 //		  cout<< "P  "<<P_<<endl;
