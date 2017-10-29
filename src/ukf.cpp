@@ -101,7 +101,7 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
 
 
 
-	use_radar_=false;
+	use_laser_=false;
 	if (meas_package.sensor_type_==MeasurementPackage::LASER && use_laser_){
 		double dt = (meas_package.timestamp_-previous_timestamp_)/1000000.0;
 		previous_timestamp_= meas_package.timestamp_;
@@ -335,15 +335,17 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
 		double yaw=Xsig_pred_(3,i);
 
 		Zsig(0,i)= sqrt(pow(p_x,2)+pow(p_y,2));
-//		Zsig(1,i)= atan2(p_y,p_x);
+		Zsig(1,i)= atan2(p_y,p_x);
 		Zsig(2,i)= (p_x*cos(yaw)*v+p_y*sin(yaw)*v)/sqrt(pow(p_x,2)+pow(p_y,2));
 
 
 	}
+	cout<<"Zsig= "<<Zsig <<endl;
 	z_pred.fill(0.0);
 	for (int i=0; i<2*n_aug_+1;i++){
 		z_pred+= weights_(i)* Zsig.col(i);
 	}
+	cout<<"z_pred= "<<z_pred <<endl;
 
 	MatrixXd R=MatrixXd(n_z,n_z);
 	R.fill(0.0);
@@ -355,10 +357,11 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
 	S= R;
 	for (int i=0; i<2*n_aug_+1;i++){
 		VectorXd diff_z= Zsig.col(i)- z_pred;
-//		while (diff_z(1)> M_PI) diff_z(1)-=2.*M_PI;
-//		while (diff_z(1)<-M_PI) diff_z(1)+=2.*M_PI;
+		while (diff_z(1)> M_PI) diff_z(1)-=2.*M_PI;
+		while (diff_z(1)<-M_PI) diff_z(1)+=2.*M_PI;
 		S+=weights_(i)* diff_z*diff_z.transpose();
 	}
+	cout<<"S= "<<S <<endl;
 
 	MatrixXd Tc= MatrixXd(n_x_, n_z);
 	Tc.fill(0.0);
@@ -374,11 +377,12 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
 	    while (x_diff(3)<-M_PI) x_diff(3)+=2.*M_PI;
 	    Tc+= weights_(i)*x_diff*z_diff.transpose();
 	}
+	cout<<"Tc= "<<Tc <<endl;
 
 	MatrixXd K= Tc*S.inverse();
 	VectorXd z_diff = z - z_pred;
-//	 while (z_diff(1)> M_PI) z_diff(1)-=2.*M_PI;
-//	 while (z_diff(1)<-M_PI) z_diff(1)+=2.*M_PI;
+	 while (z_diff(1)> M_PI) z_diff(1)-=2.*M_PI;
+	 while (z_diff(1)<-M_PI) z_diff(1)+=2.*M_PI;
 	x_= x_+ K*z_diff;
 	P_= P_- K*S*K.transpose();
 
