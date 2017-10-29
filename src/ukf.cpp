@@ -26,10 +26,10 @@ UKF::UKF() {
   P_ = MatrixXd(5, 5);
 
   // Process noise standard deviation longitudinal acceleration in m/s^2
-  std_a_ = 30;
+  std_a_ = 2;
 
   // Process noise standard deviation yaw acceleration in rad/s^2
-  std_yawdd_ = 30;
+  std_yawdd_ = 2.5;
 
   // Laser measurement noise standard deviation position1 in m
   std_laspx_ = 0.15;
@@ -101,7 +101,7 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
 
 
 
-	use_laser_=false;
+//	use_laser_=false;
 	if (meas_package.sensor_type_==MeasurementPackage::LASER && use_laser_){
 		double dt = (meas_package.timestamp_-previous_timestamp_)/1000000.0;
 		previous_timestamp_= meas_package.timestamp_;
@@ -323,8 +323,8 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
 	cout<<"start update radar"<<endl;
 	int n_z=3;
 	VectorXd z_pred= VectorXd(n_z);
-	VectorXd z= VectorXd(3);
-	z= meas_package.raw_measurements_;
+	VectorXd z=  meas_package.raw_measurements_;
+	cout<<"z= "<<z<<endl;
 
 	MatrixXd Zsig= MatrixXd(n_z, 2*n_aug_+1);
 
@@ -336,7 +336,9 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
 
 		Zsig(0,i)= sqrt(pow(p_x,2)+pow(p_y,2));
 		Zsig(1,i)= atan2(p_y,p_x);
-		Zsig(2,i)= (p_x*cos(yaw)*v+p_y*sin(yaw)*v)/sqrt(pow(p_x,2)+pow(p_y,2));
+		double vx= cos(yaw)*v;
+		double vy= sin(yaw)*v;
+		Zsig(2,i)= (p_x*vx+p_y*vy)/sqrt(pow(p_x,2)+pow(p_y,2));
 
 
 	}
@@ -347,20 +349,22 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
 	}
 	cout<<"z_pred= "<<z_pred <<endl;
 
-	MatrixXd R=MatrixXd(n_z,n_z);
-	R.fill(0.0);
+	MatrixXd R=MatrixXd::Zero(n_z,n_z);
+//	R.fill(0.0);
 	R(0,0)=pow(std_radr_,2);
 	R(1,1)=pow(std_radphi_,2);
 	R(2,2)= pow(std_radrd_,2);
 
-	MatrixXd S= MatrixXd(n_z,n_z);
-	S= R;
+	MatrixXd S= MatrixXd::Zero(n_z,n_z);
+//	S.fill(0.0);
+
 	for (int i=0; i<2*n_aug_+1;i++){
 		VectorXd diff_z= Zsig.col(i)- z_pred;
 		while (diff_z(1)> M_PI) diff_z(1)-=2.*M_PI;
 		while (diff_z(1)<-M_PI) diff_z(1)+=2.*M_PI;
 		S+=weights_(i)* diff_z*diff_z.transpose();
 	}
+	S+= R;
 	cout<<"S= "<<S <<endl;
 
 	MatrixXd Tc= MatrixXd(n_x_, n_z);
