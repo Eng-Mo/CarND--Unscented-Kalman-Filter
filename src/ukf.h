@@ -68,6 +68,8 @@ public:
   double lambda_;
   // previous time stamp
   long long previous_timestamp_;
+  // Normalized Innovation Squared
+  double nis;
 
 
   /**

@@ -82,18 +82,21 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
   Complete this function! Make sure you switch between lidar and radar
   measurements.
   */
+
 	if (!is_initialized_){
-		if (meas_package.sensor_type_== MeasurementPackage::LASER){
+		if (meas_package.sensor_type_== MeasurementPackage::LASER && use_laser_){
 			x_<< meas_package.raw_measurements_[0], meas_package.raw_measurements_[1],0,0,0;
 			previous_timestamp_= meas_package.timestamp_;
+			is_initialized_=true;
 		}
-		if (meas_package.sensor_type_== MeasurementPackage::RADAR){
+		if (meas_package.sensor_type_== MeasurementPackage::RADAR && use_radar_){
 			float rho= meas_package.raw_measurements_[0];
 			float theta= meas_package.raw_measurements_[1];
 			x_ << (rho*std::cos(theta)), (rho*std::sin(theta)), 0,0, 0;
 			previous_timestamp_= meas_package.timestamp_;
+			is_initialized_=true;
 		}
-		is_initialized_=true;
+
 
 		return;
 	}
@@ -101,7 +104,7 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
 
 
 
-//	use_laser_=false;
+
 	if (meas_package.sensor_type_==MeasurementPackage::LASER && use_laser_){
 		double dt = (meas_package.timestamp_-previous_timestamp_)/1000000.0;
 		previous_timestamp_= meas_package.timestamp_;
@@ -172,11 +175,13 @@ void UKF::Prediction(double delta_t) {
 		if (fabs(yawd)>.001){
 			p_px= p_x+ (v/yawd)*(sin(yaw+yawd*delta_t)-sin(yaw));
 			p_py= p_y+ (v/yawd)*(cos(yaw)-cos(yaw+yawd*delta_t));
+
 		}
 		else{
 			p_px= p_x+ v*cos(yaw)*delta_t;
 			p_py= p_y+ v*sin(yaw)*delta_t;
 		}
+
 		p_px += .5*pow(delta_t,2)*cos(yaw)*nu_a;
 		p_py += .5*pow(delta_t,2)*sin(yaw)*nu_a;
 
@@ -194,7 +199,7 @@ void UKF::Prediction(double delta_t) {
 
 
 	}
-	cout<< "sig pred x \n "<<Xsig_pred_<<endl;
+	cout<< "sig pred x  "<<endl<<Xsig_pred_<<endl;
 	lambda_ = 3 - n_aug_;
 
 	weights_(0)= lambda_/(lambda_+n_aug_);
@@ -210,7 +215,7 @@ void UKF::Prediction(double delta_t) {
 //		cout<< " x=  \n"<<x_<<endl;
 	}
 
-	cout<< "final predicted x=  \n"<<x_<<endl;
+	std::cout << "Predicted state x_: " << std::endl << x_ << std::endl;
 
 
 
@@ -228,7 +233,8 @@ void UKF::Prediction(double delta_t) {
 //		  cout<< "P  "<<P_<<endl;
 //		  cout << i<< endl;
 	  }
-	 cout<< "pred P  "<<P_<<endl;
+
+	 std::cout << "Predicted covariance P: " << std::endl << P_ << std::endl;
 	 cout<< "end of predection  "<<endl;
 
 }
@@ -302,6 +308,10 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
 	x_= x_+ K*(z-z_pred);
 	P_= P_- K*S*K.transpose();
 	std::cout << "Updated state x: " << std::endl << x_ << std::endl;
+	std::cout << "Updated covariance p: " << std::endl << P_ << std::endl;
+
+	nis= (z-z_pred).transpose()*S.inverse()*(z-z_pred);
+	cout<<"NIS= "<<nis<<endl;
 
 
 
@@ -391,6 +401,9 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
 	P_= P_- K*S*K.transpose();
 
 	std::cout << "Updated state x: " << std::endl << x_ << std::endl;
+	std::cout << "Updated covariance p: " << std::endl << P_ << std::endl;
+	nis= (z-z_pred).transpose()*S.inverse()*(z-z_pred);
+	cout<<"NIS= "<<nis<<endl;
 
 
 

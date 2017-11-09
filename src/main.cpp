@@ -4,6 +4,7 @@
 #include <math.h>
 #include "ukf.h"
 #include "tools.h"
+#include <fstream>
 
 using namespace std;
 
@@ -32,13 +33,28 @@ int main()
 
   // Create a Kalman Filter instance
   UKF ukf;
+  ukf.use_laser_=true;  //set laser
+  ukf.use_radar_=true; //set radar
+  ofstream output;
+  ofstream output_nis;
+  output.open("output_result.txt");
+  output_nis.open("NIS.txt");
+  if (!output.is_open()||!output_nis.is_open())
+        {
+  	  cout << "Unable to open file for writing";
+  	  return -1;
+
+        }
+    else {
+  cout <<"Files is opened"<<endl;}
+  output_nis<<"Time_stamp"<<"\t"<<"NIS"<<endl;
 
   // used to compute the RMSE later
   Tools tools;
   vector<VectorXd> estimations;
   vector<VectorXd> ground_truth;
 
-  h.onMessage([&ukf,&tools,&estimations,&ground_truth](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+  h.onMessage([&ukf,&tools,&estimations,&ground_truth, &output,&output_nis](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
@@ -75,7 +91,8 @@ int main()
           		iss >> py;
           		meas_package.raw_measurements_ << px, py;
           		iss >> timestamp;
-          		meas_package.timestamp_ = timestamp;
+          		if (ukf.use_laser_)
+          			meas_package.timestamp_ = timestamp;
           } else if (sensor_type.compare("R") == 0) {
 
       	  		meas_package.sensor_type_ = MeasurementPackage::RADAR;
@@ -88,7 +105,8 @@ int main()
           		iss >> ro_dot;
           		meas_package.raw_measurements_ << ro,theta, ro_dot;
           		iss >> timestamp;
-          		meas_package.timestamp_ = timestamp;
+          		if (ukf.use_radar_)
+          			meas_package.timestamp_ = timestamp;
           }
           float x_gt;
     	  float y_gt;
@@ -126,10 +144,28 @@ int main()
     	  estimate(1) = p_y;
     	  estimate(2) = v1;
     	  estimate(3) = v2;
+    	  if (sensor_type.compare("L") == 0){
+    		  output<< p_x<<"\t"<<p_y<<"\t"<<v1<<"\t"<<v2<<"\t";
+    		  output<< meas_package.raw_measurements_[0]<<"\t"<<meas_package.raw_measurements_[1]<<"\t";
+    		  output<<x_gt<<"\t"<<y_gt<<"\t"<<vx_gt<<"\t"<<vy_gt<<endl;
+    		  output_nis<<meas_package.timestamp_<<"\t"<<ukf.nis<<endl;
+
+
+    	    	  }
+		  else if (sensor_type.compare("R") == 0){
+			  output<< p_x<<"\t"<<p_y<<"\t"<<v1<<"\t"<<v2<<"\t";
+			  float px = meas_package.raw_measurements_[0]*cos( meas_package.raw_measurements_[1]);
+			  float py= meas_package.raw_measurements_[0]* sin(meas_package.raw_measurements_[1]);
+			  output<<px<<"\t"<<py<<"\t";
+			  output<<x_gt<<"\t"<<y_gt<<"\t"<<vx_gt<<"\t"<<vy_gt<<endl;
+			  output_nis<<meas_package.timestamp_<<"\t"<<ukf.nis<<endl;
+
+    	}
     	  
     	  estimations.push_back(estimate);
 
     	  VectorXd RMSE = tools.CalculateRMSE(estimations, ground_truth);
+
 
           json msgJson;
           msgJson["estimate_x"] = p_x;
