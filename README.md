@@ -1,5 +1,5 @@
 
-# CarND Extended Kalman Filter Project
+# CarND Unscented Kalman Filter Project
 
 [//]: # (Image References)
 [image1]: ./Output_images/NIS_L.png
